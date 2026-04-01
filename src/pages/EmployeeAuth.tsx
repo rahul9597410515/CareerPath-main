@@ -14,37 +14,53 @@ const EmployeeAuth = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      if (isSignUp) {
+        // Sign Up Flow
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Check if user has employee role
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id)
-        .eq("role", "employee")
-        .single();
+        toast.success("Account created successfully! Please sign in if you aren't automatically redirected.");
+        setIsSignUp(false);
+        setPassword("");
+      } else {
+        // Sign In Flow
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (!roleData) {
-        await supabase.auth.signOut();
-        toast.error("Access denied. Employee account required.");
-        return;
+        if (error) throw error;
+
+        // Check if user has employee role
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .eq("role", "employee")
+          .single();
+
+        if (!roleData) {
+          await supabase.auth.signOut();
+          toast.error("Access denied. Employee account required.");
+          return;
+        }
+
+        toast.success("Welcome back!");
+        navigate("/employee/dashboard");
       }
-
-      toast.success("Welcome back!");
-      navigate("/employee/dashboard");
     } catch (error: any) {
-      toast.error(error.message || "Failed to sign in");
+      toast.error(error.message || `Failed to ${isSignUp ? 'sign up' : 'sign in'}`);
     } finally {
       setLoading(false);
     }
@@ -59,13 +75,15 @@ const EmployeeAuth = () => {
               <Briefcase className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">Employee Login</CardTitle>
+          <CardTitle className="text-2xl text-center">
+            {isSignUp ? "Create Employee Account" : "Employee Login"}
+          </CardTitle>
           <CardDescription className="text-center">
-            Sign in to access your employee dashboard
+            {isSignUp ? "Sign up to access the employee dashboard" : "Sign in to access your employee dashboard"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -97,10 +115,21 @@ const EmployeeAuth = () => {
               </div>
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? (isSignUp ? "Creating account..." : "Signing in...") : (isSignUp ? "Create Account" : "Sign In")}
             </Button>
+
+            <div className="mt-4 text-center text-sm">
+              <button
+                type="button"
+                className="text-primary hover:underline"
+                onClick={() => setIsSignUp(!isSignUp)}
+              >
+                {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Create one"}
+              </button>
+            </div>
           </form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
+          
+          <div className="mt-6 text-center text-sm text-muted-foreground border-t pt-4">
             <a href="/auth/hr" className="hover:text-primary">
               HR Admin? Click here to login
             </a>
