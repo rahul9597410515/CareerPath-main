@@ -1,0 +1,10 @@
+project_id = "wpmqxysgetgeonitbfda"
+
+[functions.create-employee]
+verify_jwt = false
+
+[functions.generate-recommendations]
+verify_jwt = true
+
+[functions.chatbot]
+verify_jwt = true
